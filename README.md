@@ -44,10 +44,10 @@ python3 render_frames.py
 
 これにより、`frame*.dat` から `frame*.png` 画像ファイルが生成されます。各ファイルにはエージェントの位置（黒丸）と速度ベクトル（線）が描かれています。
 
-![images/frame0000.png](images/frame0000.png)
-![images/frame0100.png](images/frame0100.png)
-![images/frame0200.png](images/frame0200.png)
-![images/frame0300.png](images/frame0300.png)
+![t =   0](images/frame0000.png)
+![t =  50](images/frame0100.png)
+![t = 100](images/frame0200.png)
+![t = 150](images/frame0300.png)
 
 ### アニメーションGIFの作成
 
@@ -66,6 +66,13 @@ gnuplot spatio_temporal.plt
 これにより、`spatio_temporal.dat` をもとに `spatio_temporal.png` が作成されます。
 
 ![時空図](images/spatio_temporal.png)
+
+## リファレンス
+
+実装にあたり、以下の論文を参考にしました。
+
+* A. Nakayama, K. Hasebe, and Y. Sugiyama, "Instability of pedestrian flow and phase structure in a two-dimensional optimal velocity model", Phys. Rev. E, **71**, 6121 (2005).
+    DOI: [10.1103/PhysRevE.71.036121](https://doi.org/10.1103/PhysRevE.71.036121])
 
 ## ライセンス
 
