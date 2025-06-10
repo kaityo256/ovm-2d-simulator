@@ -1,6 +1,10 @@
 #include <cmath>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <random>
+#include <sstream>
+#include <string>
 #include <vector>
 // パラメータ
 
@@ -125,6 +129,65 @@ void initialize_agents_triangular_lattice(std::vector<People> &agents,
   }
 }
 
+void write_agent_frame(const std::vector<People> &agents) {
+  static int index = 0;
+
+  // ファイル名を作成：frame0000.dat の形式
+  std::ostringstream filename;
+  filename << "frame" << std::setfill('0') << std::setw(4) << index << ".dat";
+
+  std::ofstream ofs(filename.str());
+  std::cout << filename.str() << std::endl;
+  if (!ofs) {
+    std::cerr << "Error: Failed to open file " << filename.str() << " for writing." << std::endl;
+    return;
+  }
+
+  for (const auto &p : agents) {
+    ofs << p.x << " " << p.y << " " << p.vx << " " << p.vy << "\n";
+  }
+
+  ++index; // 次回呼び出し時のインデックスを更新
+}
+
+void step_simulation(std::vector<People> &agents) {
+  const double R = 3.0;
+
+  // 1. 近傍リストの更新
+  update_neighbors(agents, R, LX, LY);
+
+  // 2. 力積による速度更新（全対：jが受ける力を各kから計算）
+  for (int j = 0; j < agents.size(); ++j) {
+    for (int k : agents[j].neighbors) {
+      calculate_force(j, k, agents);
+    }
+  }
+
+  // 3. 位置更新 ＆ 周期境界処理
+  for (auto &p : agents) {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+
+    // 周期境界条件
+    if (p.x < 0) p.x += LX;
+    if (p.x >= LX) p.x -= LX;
+    if (p.y < 0) p.y += LY;
+    if (p.y >= LY) p.y -= LY;
+  }
+}
+
+void save_yaml(const std::string &filename = "conf.yaml") {
+  std::ofstream ofs(filename);
+  if (!ofs) {
+    std::cerr << "Error: Failed to open " << filename << " for writing." << std::endl;
+    return;
+  }
+
+  ofs << std::fixed << std::setprecision(6);
+  ofs << "LX: " << LX << "\n";
+  ofs << "LY: " << LY << "\n";
+}
+
 int main() {
   const int seed = 12345;
   std::mt19937 rng(seed);
@@ -132,4 +195,12 @@ int main() {
   const double r = 1.3;
   initialize_agents_triangular_lattice(agents, LX, LY, r, rng);
   std::cout << LX << " " << LY << agents.size() << std::endl;
+  write_agent_frame(agents);
+  for (int i = 0; i < 10000; i++) {
+    step_simulation(agents);
+    if (i % 100 == 0) {
+      write_agent_frame(agents);
+    }
+  }
+  save_yaml();
 }
