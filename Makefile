@@ -14,7 +14,6 @@ run: $(TARGET)
 gif: run
 	python3 render_frames.py
 	ffmpeg -y -i frame%04d.png animation.gif
-	ffmpeg -y -i frame%04d.png animation.gif
 
 .PHONY: clean clear run
 clean:
