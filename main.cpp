@@ -10,9 +10,11 @@
 
 const double alpha = 0.25;
 const double beta = 2.5;
+const double a = 0.5;
 const double b = 1.0;
 const double c = -1.0;
-const double dt = 0.01;
+const double dt = 0.5;
+const double R = 2.0; // Search Length
 
 // システムサイズ
 
@@ -21,6 +23,7 @@ double LX, LY;
 struct People {
   double x, y;
   double vx, vy;
+  double fx, fy;
   double v0_x, v0_y;
   std::vector<int> neighbors;
 };
@@ -33,6 +36,11 @@ void calculate_force(int j, int k, std::vector<People> &agents) {
   double dx = pk.x - pj.x;
   double dy = pk.y - pj.y;
 
+  if (dx < -LX * 0.5) dx += LX;
+  if (dx > LX * 0.5) dx -= LX;
+  if (dy < -LY * 0.5) dy += LY;
+  if (dy > LY * 0.5) dy -= LY;
+
   double r = std::sqrt(dx * dx + dy * dy);
   double v0_norm = std::sqrt(pj.v0_x * pj.v0_x + pj.v0_y * pj.v0_y);
 
@@ -44,33 +52,31 @@ void calculate_force(int j, int k, std::vector<People> &agents) {
 
   double force_magnitude = alpha * (std::tanh(beta * (r - b)) + c);
   // 全体の力積ベクトル: dt * f(r_kj) * (1 + cos_phi) * n_kj
-  double fx = dt * force_magnitude * (1.0 + cos_phi) * n_x;
-  double fy = dt * force_magnitude * (1.0 + cos_phi) * n_y;
+  double fx = force_magnitude * (1.0 + cos_phi) * n_x;
+  double fy = force_magnitude * (1.0 + cos_phi) * n_y;
 
-  // 速度の更新
-  pj.vx += fx;
-  pj.vy += fy;
+  // 力の追加
+  pj.fx += fx;
+  pj.fy += fy;
 }
 
-inline double periodic_distance(double dx, double L) {
-  if (dx > L / 2) dx -= L;
-  if (dx < -L / 2) dx += L;
-  return dx;
-}
-
-void update_neighbors(std::vector<People> &agents, double R, double LX, double LY) {
+void update_neighbors(std::vector<People> &agents, double R) {
   const int N = agents.size();
   const double R2 = R * R;
 
-  // 全員のneighborsをまずクリア
   for (auto &p : agents) {
     p.neighbors.clear();
   }
 
   for (int j = 0; j < N; ++j) {
     for (int k = j + 1; k < N; ++k) {
-      double dx = periodic_distance(agents[k].x - agents[j].x, LX);
-      double dy = periodic_distance(agents[k].y - agents[j].y, LY);
+      double dx = agents[k].x - agents[j].x;
+      double dy = agents[k].y - agents[j].y;
+      if (dx < -LX * 0.5) dx += LX;
+      if (dy < -LY * 0.5) dy += LY;
+      if (dx > LX * 0.5) dx -= LX;
+      if (dy > LY * 0.5) dy -= LY;
+
       double dist2 = dx * dx + dy * dy;
 
       if (dist2 <= R2) {
@@ -98,7 +104,7 @@ void initialize_agents_triangular_lattice(std::vector<People> &agents,
   agents.clear();
   agents.reserve(N);
 
-  std::uniform_real_distribution<double> jitter(-0.005 * r, 0.005 * r); // rに対する割合で揺らぎ
+  std::uniform_real_distribution<double> jitter(-0.01, 0.01); // rに対する割合で揺らぎ
 
   for (int iy = 0; iy < ny; ++iy) {
     for (int ix = 0; ix < nx; ++ix) {
@@ -112,10 +118,6 @@ void initialize_agents_triangular_lattice(std::vector<People> &agents,
 
       x += jitter(rng);
       y += jitter(rng);
-
-      // 周期境界に収める
-      x = std::fmod(x + LX, LX);
-      y = std::fmod(y + LY, LY);
 
       p.x = x;
       p.y = y;
@@ -137,7 +139,7 @@ void write_agent_frame(const std::vector<People> &agents) {
   filename << "frame" << std::setfill('0') << std::setw(4) << index << ".dat";
 
   std::ofstream ofs(filename.str());
-  std::cout << filename.str() << std::endl;
+  std::cout << "# " << filename.str() << std::endl;
   if (!ofs) {
     std::cerr << "Error: Failed to open file " << filename.str() << " for writing." << std::endl;
     return;
@@ -151,10 +153,14 @@ void write_agent_frame(const std::vector<People> &agents) {
 }
 
 void step_simulation(std::vector<People> &agents) {
-  const double R = 3.0;
+
+  for (auto &p : agents) {
+    p.fx = 0.0;
+    p.fy = 0.0;
+  }
 
   // 1. 近傍リストの更新
-  update_neighbors(agents, R, LX, LY);
+  update_neighbors(agents, R);
 
   // 2. 力積による速度更新（全対：jが受ける力を各kから計算）
   for (int j = 0; j < agents.size(); ++j) {
@@ -165,6 +171,9 @@ void step_simulation(std::vector<People> &agents) {
 
   // 3. 位置更新 ＆ 周期境界処理
   for (auto &p : agents) {
+    p.vx += a * (p.v0_x + p.fx - p.vx) * dt;
+    p.vy += a * (p.v0_y + p.fy - p.vy) * dt;
+
     p.x += p.vx * dt;
     p.y += p.vy * dt;
 
@@ -188,19 +197,34 @@ void save_yaml(const std::string &filename = "conf.yaml") {
   ofs << "LY: " << LY << "\n";
 }
 
-int main() {
-  const int seed = 12345;
+void test() {
+  const int seed = 12346;
   std::mt19937 rng(seed);
   std::vector<People> agents;
   const double r = 1.3;
   initialize_agents_triangular_lattice(agents, LX, LY, r, rng);
-  std::cout << LX << " " << LY << agents.size() << std::endl;
+  const double R = 1.1;
+  update_neighbors(agents, R);
+}
+
+void simulation() {
+  const int seed = 12346;
+  std::mt19937 rng(seed);
+  std::vector<People> agents;
+  const double r = 1.3;
+  initialize_agents_triangular_lattice(agents, LX, LY, r, rng);
+  std::cout << "# " << LX << " " << LY << agents.size() << std::endl;
   write_agent_frame(agents);
-  for (int i = 0; i < 10000; i++) {
+  for (int i = 0; i < 400; i++) {
     step_simulation(agents);
-    if (i % 100 == 0) {
-      write_agent_frame(agents);
+    write_agent_frame(agents);
+    for (auto &a : agents) {
+      printf("%f %f\n", i * dt, a.x);
     }
   }
   save_yaml();
+}
+
+int main() {
+  simulation();
 }

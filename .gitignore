@@ -1,3 +1,6 @@
 ovm-2d-simulator
 .vscode
 *.dat
+*.png
+*.yaml
+*.gif

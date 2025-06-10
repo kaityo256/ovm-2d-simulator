@@ -8,6 +8,17 @@ SRC = main.cpp
 $(TARGET): $(SRC)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRC)
 
-.PHONY: clean
+run:
+	./ovm-2d-simulator
+	python3 render_frames.py
+	ffmpeg -y -i frame%04d.png animation.gif
+
+gif:
+	ffmpeg -y -i frame%04d.png animation.gif
+
+.PHONY: clean clear run
 clean:
 	rm -f $(TARGET)
+
+clear: clean
+	rm -f *.png *.dat
