@@ -72,7 +72,7 @@ gnuplot spatio_temporal.plt
 実装にあたり、以下の論文を参考にしました。
 
 * A. Nakayama, K. Hasebe, and Y. Sugiyama, "Instability of pedestrian flow and phase structure in a two-dimensional optimal velocity model", Phys. Rev. E, **71**, 6121 (2005).
-    DOI: [10.1103/PhysRevE.71.036121](https://doi.org/10.1103/PhysRevE.71.036121])
+    DOI: [10.1103/PhysRevE.71.036121](https://doi.org/10.1103/PhysRevE.71.036121)
 
 ## ライセンス
 
