@@ -6,20 +6,20 @@
 #include <sstream>
 #include <string>
 #include <vector>
-// パラメータ
 
+// パラメータ
 const double alpha = 0.25;
 const double beta = 2.5;
 const double a = 0.5;
 const double b = 1.0;
 const double c = -1.0;
-const double dt = 0.5;
-const double R = 2.0; // Search Length
+const double dt = 0.5; // 時間刻み
+const double R = 2.0;  // Search Length
 
 // システムサイズ
-
 double LX, LY;
 
+// 歩行者クラス
 struct People {
   double x, y;
   double vx, vy;
@@ -60,7 +60,8 @@ void calculate_force(int j, int k, std::vector<People> &agents) {
   pj.fy += fy;
 }
 
-void update_neighbors(std::vector<People> &agents, double R) {
+// 隣接歩行者を探す
+void update_neighbors(std::vector<People> &agents) {
   const int N = agents.size();
   const double R2 = R * R;
 
@@ -132,9 +133,8 @@ void initialize_agents_triangular_lattice(std::vector<People> &agents,
 }
 
 void write_agent_frame(const std::vector<People> &agents) {
+  // GIFアニメーション用の元データ(frame????.dat)の出力
   static int index = 0;
-
-  // ファイル名を作成：frame0000.dat の形式
   std::ostringstream filename;
   filename << "frame" << std::setfill('0') << std::setw(4) << index << ".dat";
 
@@ -149,7 +149,7 @@ void write_agent_frame(const std::vector<People> &agents) {
     ofs << p.x << " " << p.y << " " << p.vx << " " << p.vy << "\n";
   }
 
-  ++index; // 次回呼び出し時のインデックスを更新
+  ++index;
 }
 
 void step_simulation(std::vector<People> &agents) {
@@ -159,17 +159,17 @@ void step_simulation(std::vector<People> &agents) {
     p.fy = 0.0;
   }
 
-  // 1. 近傍リストの更新
-  update_neighbors(agents, R);
+  // 近傍リストの更新
+  update_neighbors(agents);
 
-  // 2. 力積による速度更新（全対：jが受ける力を各kから計算）
+  // jが受ける力を各kから計算して積算
   for (int j = 0; j < agents.size(); ++j) {
     for (int k : agents[j].neighbors) {
       calculate_force(j, k, agents);
     }
   }
 
-  // 3. 位置更新 ＆ 周期境界処理
+  // 運動量、位置の更新
   for (auto &p : agents) {
     p.vx += a * (p.v0_x + p.fx - p.vx) * dt;
     p.vy += a * (p.v0_y + p.fy - p.vy) * dt;
@@ -185,6 +185,7 @@ void step_simulation(std::vector<People> &agents) {
   }
 }
 
+// Pythonにあとで渡すためのYAMLファイルを作成
 void save_yaml(const std::string &filename = "conf.yaml") {
   std::ofstream ofs(filename);
   if (!ofs) {
@@ -197,20 +198,13 @@ void save_yaml(const std::string &filename = "conf.yaml") {
   ofs << "LY: " << LY << "\n";
 }
 
-void test() {
-  const int seed = 12346;
-  std::mt19937 rng(seed);
-  std::vector<People> agents;
-  const double r = 1.3;
-  initialize_agents_triangular_lattice(agents, LX, LY, r, rng);
-  const double R = 1.1;
-  update_neighbors(agents, R);
-}
-
 void simulation() {
   const int seed = 12346;
   std::mt19937 rng(seed);
   std::vector<People> agents;
+
+  std::stringstream ss_stgraph; // 時空図用
+
   const double r = 1.3;
   initialize_agents_triangular_lattice(agents, LX, LY, r, rng);
   std::cout << "# " << LX << " " << LY << agents.size() << std::endl;
@@ -219,10 +213,18 @@ void simulation() {
     step_simulation(agents);
     write_agent_frame(agents);
     for (auto &a : agents) {
-      printf("%f %f\n", i * dt, a.x);
+      ss_stgraph << i * dt << " " << a.x << std::endl;
     }
   }
   save_yaml();
+
+  // 時空図の保存
+  std::ofstream ofs("spatio_temporal.dat");
+  if (!ofs) {
+    std::cerr << "Error: Failed to open spatio_temporal.dat for writing." << std::endl;
+  } else {
+    ofs << ss_stgraph.str();
+  }
 }
 
 int main() {
