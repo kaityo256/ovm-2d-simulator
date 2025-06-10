@@ -44,6 +44,11 @@ python3 render_frames.py
 
 これにより、`frame*.dat` から `frame*.png` 画像ファイルが生成されます。各ファイルにはエージェントの位置（黒丸）と速度ベクトル（線）が描かれています。
 
+![images/frame0000.png](images/frame0000.png)
+![images/frame0100.png](images/frame0100.png)
+![images/frame0200.png](images/frame0200.png)
+![images/frame0300.png](images/frame0300.png)
+
 ### アニメーションGIFの作成
 
 ffmpeg等でアニメーションGIFが作れます。
@@ -60,3 +65,8 @@ gnuplot spatio_temporal.plt
 
 これにより、`spatio_temporal.dat` をもとに `spatio_temporal.png` が作成されます。
 
+![時空図](images/spatio_temporal.png)
+
+## ライセンス
+
+MIT License
